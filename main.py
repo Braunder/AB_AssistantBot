@@ -3,7 +3,7 @@ import threading
 import sqlite3
 from commands import start, add_meeting, list_meetings, delete_meeting, show_main_menu, check_meetings
 
-API_TOKEN = '7954557300:AAG7K8KnYpy5G1zXp0L7VX6iPgrm7ykXwrM'  # Замените на ваш токен
+API_TOKEN = ''  # Замените на ваш токен
 bot = telebot.TeleBot(API_TOKEN)
 
 # Подключение к базе данных
