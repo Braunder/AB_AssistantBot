@@ -49,22 +49,54 @@ class Schedule:
             db.delete_past_meetings()
 
             # Получаем все встречи с нужными колонками
-            db.cursor.execute("SELECT id, user_id, date, time, description, remind_24h, remind_1h FROM meetings")
+            db.cursor.execute("SELECT id, user_id, date, time, name, description, recurrence FROM meetings")
             meetings = db.cursor.fetchall()
 
             for meeting in meetings:
-                meeting_id, user_id, date_str, time_str, description, remind_24h, remind_1h = meeting
+                meeting_id, user_id, date_str, time_str, name, description, recurrence = meeting
+                db.cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+                username = db.cursor.fetchone()[0]
                 meeting_datetime = datetime.strptime(f"{date_str} {time_str}", "%d.%m.%Y %H:%M")
 
                 # Напоминание за сутки
-                if remind_24h and (meeting_datetime - timedelta(days=1)) <= now < meeting_datetime:
-                    await bot.send_message(user_id, f"Напоминание: через сутки у вас встреча '{description}'.")
+                if meeting_datetime - timedelta(days=1) <= now < meeting_datetime:
+                    await bot.send_message(user_id, f"@{username}\nНапоминание:\nЧерез сутки у вас встреча '{name}'\nОписание:\n'{description}'.")
 
                 # Напоминание за час
-                if remind_1h and (meeting_datetime - timedelta(hours=1)) <= now < meeting_datetime:
-                    await bot.send_message(user_id, f"Напоминание: через час у вас встреча '{description}'.")
+                if meeting_datetime - timedelta(hours=1) <= now < meeting_datetime:
+                    await bot.send_message(user_id, f"@{username}\nНапоминание:\nЧерез час у вас встреча '{name}'\nОписание:\n'{description}'.")
+
+                # Обработка повторяющихся встреч
+                if recurrence == "Еженедельно":
+                    next_meeting_datetime = meeting_datetime + timedelta(weeks=1)
+                    next_meeting_date_str = next_meeting_datetime.strftime("%d.%m.%Y")
+                    next_meeting_time_str = next_meeting_datetime.strftime("%H:%M")
+                    
+                    # Проверяем, не добавлена ли уже встреча на следующую неделю
+                    db.cursor.execute("SELECT id FROM meetings WHERE user_id = ? AND date = ? AND time = ?", (user_id, next_meeting_date_str, next_meeting_time_str))
+                    next_meeting_id = db.cursor.fetchone()
+                    
+                    if not next_meeting_id:
+                        db.add_meeting(user_id, next_meeting_date_str, next_meeting_time_str, description, recurrence)
+                elif recurrence == "Ежемесячно":
+                    next_meeting_date_str = datetime.strptime(date_str, "%d.%m.%Y")
+                    if next_meeting_date_str.month == 12:
+                        next_meeting_date_str = next_meeting_date_str.replace(year=next_meeting_date_str.year + 1, month=1)
+                    else:
+                        next_meeting_date_str = next_meeting_date_str.replace(month=next_meeting_date_str.month + 1)
+                    if next_meeting_date_str.day > 28:
+                        next_meeting_date_str = next_meeting_date_str.replace(day=28)
+                    next_meeting_date_str = next_meeting_date_str.strftime("%d.%m.%Y")
+                    next_meeting_time_str = time_str
+                    
+                    # Проверяем, не добавлена ли уже встреча на следующий месяц
+                    db.cursor.execute("SELECT id FROM meetings WHERE user_id = ? AND date = ? AND time = ?", (user_id, next_meeting_date_str, next_meeting_time_str))
+                    next_meeting_id = db.cursor.fetchone()
+                    
+                    if not next_meeting_id:
+                        db.add_meeting(user_id, next_meeting_date_str, next_meeting_time_str, description, recurrence)
 
             db.close()
-            await asyncio.sleep(15)  # Проверяем каждую минуту
+            await asyncio.sleep(60)  # Проверяем каждую минуту
 
     

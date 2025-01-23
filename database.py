@@ -22,7 +22,9 @@ class Database:
                 user_id INTEGER NOT NULL,
                 date DATE NOT NULL,
                 time TIME NOT NULL,
+                name TEXT NOT NULL,
                 description TEXT NOT NULL,
+                recurrence TEXT NOT NULL DEFAULT 'Один раз',
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         """)
@@ -35,25 +37,27 @@ class Database:
         """, (user_id, username))
         self.conn.commit()
 
-    def add_meeting(self, user_id, date, time, description):
+    def add_meeting(self, user_id, date, time, name, description, recurrence='Один раз'):
         """Добавляет встречу в таблицу meetings."""
         self.cursor.execute("""
-            INSERT INTO meetings (user_id, date, time, description)
-            VALUES (?, ?, ?, ?)
-        """, (user_id, date, time, description))
+            INSERT INTO meetings (user_id, date, time, name, description, recurrence)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, date, time, name, description, recurrence))
         self.conn.commit()
 
-    def delete_meeting(self, meeting_id, user_id):
-        """Удаляет встречу по ID и user_id."""
+    def delete_past_meetings(self):
+        """Удаляет прошедшие встречи, которые не повторяются."""
+        now = datetime.now().strftime("%d-%m-%Y %H:%M")
         self.cursor.execute("""
-            DELETE FROM meetings WHERE id = ? AND user_id = ?
-        """, (meeting_id, user_id))
+            DELETE FROM meetings
+            WHERE date || ' ' || time < ? AND recurrence = 'Один раз'
+        """, (now,))
         self.conn.commit()
 
     def get_all_meetings(self, user_id):
         """Возвращает все встречи для указанного пользователя."""
         self.cursor.execute("""
-            SELECT id, date, time, description FROM meetings WHERE user_id = ?
+            SELECT id, date, time, description, recurrence FROM meetings WHERE user_id = ?
         """, (user_id,))
         return self.cursor.fetchall()
 

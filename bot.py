@@ -18,7 +18,9 @@ dp = Dispatcher()
 class MeetingForm(StatesGroup):
     date = State()
     time = State()
+    name = State()
     description = State()
+    recurrence = State()
 
 class GrantPremiumForm(StatesGroup):
     username = State()
@@ -54,8 +56,6 @@ async def send_keyboard(message: Message):
     db = Database('meetings.db')
     db.add_user(message.from_user.id, message.from_user.username)
     db.close()
-
-    await message.answer("Привет, я ваш телеграм-бот!")
     
     # Создаем меню с кнопками в зависимости от user_id
     keyboard = get_start_keyboard(message.from_user.id)
@@ -79,7 +79,6 @@ async def add_meeting(message: Message, state: FSMContext):
         if meeting_count >= max_meetings:
             await message.answer(
                 f"Вы достигли лимита встреч ({max_meetings}). Удалите старые встречи или приобретите премиум-статус.",
-                reply_markup=ReplyKeyboardRemove()
             )
             db.close()
             return
@@ -132,6 +131,17 @@ async def process_time(message: Message, state: FSMContext):
         return
 
     await state.update_data(time=time_str)
+    await message.answer("Введите название встречи:")
+    await state.set_state(MeetingForm.name)
+
+@dp.message(MeetingForm.name)
+async def process_name(message: Message, state: FSMContext):
+    """Обрабатывает ввод названия встречи."""
+    if message.text == "Вернуться в начало":
+        await return_to_start(message, state)
+        return
+    
+    await state.update_data(name=message.text)
     await message.answer("Введите описание встречи:")
     await state.set_state(MeetingForm.description)
 
@@ -144,11 +154,47 @@ async def process_description(message: Message, state: FSMContext):
     
     user_data = await state.get_data()
     db = Database('meetings.db')
+    
+    # Запрашиваем тип повторения
+    keyboard = [
+        [KeyboardButton(text="Один раз")],
+        [KeyboardButton(text="Еженедельно")],
+        [KeyboardButton(text="Ежемесячно")],
+        [KeyboardButton(text="Вернуться в начало")]
+    ]
+    
+    await message.answer("Выберите тип повторения:", reply_markup=ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,  # Автоматически изменять размер клавиатуры
+        one_time_keyboard=True  # Скрыть клавиатуру после выбора
+    ))
+    await state.set_state(MeetingForm.recurrence)
+    await state.update_data(description=message.text)
+
+@dp.message(MeetingForm.recurrence)
+async def process_recurrence(message: Message, state: FSMContext):
+    """Обрабатывает ввод типа повторения и добавляет встречу в базу данных."""
+    recurrence_options = {
+        "Один раз": "Один раз",
+        "Еженедельно": "Еженедельно",
+        "Ежемесячно": "Ежемесячно"
+    }
+    
+    if message.text not in recurrence_options:
+        await message.answer("Некорректный выбор. Пожалуйста, выберите один из вариантов.")
+        return
+    
+    recurrence = recurrence_options[message.text]
+    
+    user_data = await state.get_data()
+    db = Database('meetings.db')
     db.add_meeting(
         message.from_user.id,
         user_data['date'],
         user_data['time'],
-        message.text
+        user_data['name'],
+        user_data['description'],
+        recurrence
     )
     
     await message.answer("Встреча успешно добавлена!", reply_markup=get_start_keyboard(message.from_user.id))
@@ -163,13 +209,21 @@ async def delete_meeting(message: Message):
     db = Database('meetings.db')
     meetings = db.get_all_meetings(message.from_user.id)
     if meetings:
-        meetings_list = "\n".join([f"ID: {meeting[0]}, Дата: {meeting[1]}, Время: {meeting[2]}, Описание: {meeting[3]}" for meeting in meetings])
-        await message.answer(f"Ваши встречи:\n{meetings_list}\nВведите ID встречи для удаления или нажмите 'Вернуться в начало':", reply_markup=get_start_keyboard(message.from_user.id))
+        keyboard = []
+        for meeting in meetings:
+            keyboard.append([KeyboardButton(text=f"ID: {meeting[0]}, Дата: {meeting[1]}, Время: {meeting[2]}, Описание: {meeting[3]}")])
+        keyboard.append([KeyboardButton(text="Вернуться в начало")])
+        
+        await message.answer("Выберите встречу для удаления:", reply_markup=ReplyKeyboardMarkup(
+            keyboard=keyboard,
+            resize_keyboard=True,  # Автоматически изменять размер клавиатуры
+            one_time_keyboard=True  # Скрыть клавиатуру после выбора
+        ))
     else:
         await message.answer("У вас нет встреч для удаления.")
     db.close()
 
-@dp.message(lambda message: message.text.isdigit())
+@dp.message(lambda message: message.text.startswith("ID:"))
 async def process_delete_meeting(message: Message, state: FSMContext):
     """Удаляет встречу по ID, если она существует."""
     current_state = await state.get_state()
@@ -178,18 +232,14 @@ async def process_delete_meeting(message: Message, state: FSMContext):
     if current_state != "MeetingForm:date" and current_state != "MeetingForm:time" and current_state != "MeetingForm:description":
         db = Database('meetings.db')
         
-        # Получаем все встречи пользователя
-        meetings = db.get_all_meetings(message.from_user.id)
+        # Извлекаем ID встречи из сообщения
+        meeting_id = message.text.split(",")[0].split(":")[1]
         
-        # Проверяем, существует ли встреча с таким ID
-        meeting_ids = [str(meeting[0]) for meeting in meetings]  # Преобразуем ID встреч в строки
-        if message.text in meeting_ids:
-            db.delete_meeting(message.text, message.from_user.id)
-            await message.answer("Встреча успешно удалена!", reply_markup=get_start_keyboard(message.from_user.id))
-        else:
-            # Не отправляем сообщение, если встреча не найдена
-            pass
+        # Удаляем встречу по ID
+        db.cursor.execute("DELETE FROM meetings WHERE id = ?", (meeting_id,))
+        db.conn.commit()
         
+        await message.answer("Встреча успешно удалена!", reply_markup=get_start_keyboard(message.from_user.id))
         db.close()
     else:
         # Если пользователь находится в процессе добавления встречи, игнорируем сообщение
@@ -203,7 +253,7 @@ async def show_all_meetings(message: Message):
     db = Database('meetings.db')
     meetings = db.get_all_meetings(message.from_user.id)
     if meetings:
-        meetings_list = "\n".join([f"ID: {meeting[0]}, Дата: {meeting[1]}, Время: {meeting[2]}, Описание: {meeting[3]}" for meeting in meetings])
+        meetings_list = "\n".join([f"{'='*52}\nID: {meeting[0]}\nДата: {meeting[1]}\nВремя: {meeting[2]}\nОписание: {meeting[3]}\nПовторение: {meeting[4]}\n{'='*52}\n" for meeting in meetings])
         await message.answer(f"Ваши встречи:\n{meetings_list}")
     else:
         await message.answer("У вас нет встреч.")
@@ -235,7 +285,9 @@ async def process_grant_premium_username(message: Message, state: FSMContext):
     user = db.cursor.fetchone()
     if user:
         user_id = user[0]
-        await bot.send_message(user_id, "🎉 Вам выдан премиум-статус! Теперь вы можете добавлять до 20 встреч.")
+        await bot.send_message(user_id, """
+                               🎉 Вам выдан премиум-статус! 
+                               Теперь вы можете добавлять до *20* встреч.""")
     
     await message.answer(f"Премиум-статус успешно выдан пользователю {username}.")
     await state.clear()
@@ -253,7 +305,10 @@ async def process_revoke_premium_username(message: Message, state: FSMContext):
     user = db.cursor.fetchone()
     if user:
         user_id = user[0]
-        await bot.send_message(user_id, "😔 Ваш премиум-статус был удален. Теперь вы можете добавлять до 5 встреч.")
+        await bot.send_message(user_id, """
+                               😔 Ваш премиум-статус был удален.
+                                Теперь вы можете добавлять до *5* встреч.
+                               """)
     
     await message.answer(f"Премиум-статус успешно удален у пользователя {username}.")
     await state.clear()
@@ -268,6 +323,7 @@ async def return_to_start(message: Message, state: FSMContext):
 
 async def main():
     """Запуск бота."""
+    asyncio.create_task(sc().send_reminders())
     await dp.start_polling(bot, skip_updates=True)
 
 if __name__ == '__main__':
