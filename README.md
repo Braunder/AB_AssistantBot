@@ -1,22 +1,22 @@
 # AB Assistant Bot
 =====================
 
-## Описание проекта
+## Project Description
 --------------------
 
-AB Assistant Bot - это бот, созданный для управления встречами и мероприятиями. Он позволяет пользователям добавлять, удалять и просматривать встречи, а также выдавать и удалять премиум-статус другим пользователям.
+AB Assistant Bot is a bot designed to manage meetings and events. It allows users to add, delete, and view meetings, as well as grant and revoke premium status to other users.
 
-## Функционал
---------------
+## Features
+------------
 
-*   Добавление встреч с указанием даты, времени, названия и описания
-*   Удаление встреч по ID
-*   Просмотр всех встреч пользователя
-*   Выдача премиум-статуса другим пользователям
-*   Удаление премиум-статуса у других пользователей
-*   Напоминания о встречах за сутки и за час до начала
+*   Add meetings with date, time, name, and description
+*   Delete meetings by ID
+*   View all meetings for a user
+*   Grant premium status to other users
+*   Revoke premium status from other users
+*   Reminders for meetings one day and one hour before the start
 
-## Технологии
+## Technologies
 --------------
 
 *   Python 3.x
@@ -24,45 +24,25 @@ AB Assistant Bot - это бот, созданный для управления
 *   sqlite3
 *   asyncio
 
-## Установка
+## Installation
 -------------
 
-1.  Клонировать репозиторий: `git clone https://github.com/your-repo/AB-Assistant-Bot.git`
-2.  Установить зависимости: `pip install -r requirements.txt`
-3.  Создать файл `config.py` с токеном бота: `TOKEN = 'your-token'`
-4.  Запустить бота: `python bot.py`
+1.  Clone the repository: `git clone https://github.com/your-repo/AB-Assistant-Bot.git`
+2.  Install dependencies: `pip install -r requirements.txt`
+3.  Create a `config.py` file with the bot token: `TOKEN = 'your-token'`
+4.  Run the bot: `python bot.py`
 
-## Использование
---------------
-
-1.  Начать диалог с ботом: `/start`
-2.  Добавить встречу: `Добавить встречу`
-3.  Удалить встречу: `Удалить встречу`
-4.  Просмотреть все встречи: `Все встречи`
-5.  Выдать премиум-статус: `Выдать премиум`
-6.  Удалить премиум-статус: `Удалить премиум`
-
-## Лицензия
+## Usage
 ------------
 
-MIT License
+1.  Start a conversation with the bot: `/start`
+2.  Add a meeting: `Add meeting`
+3.  Delete a meeting: `Delete meeting`
+4.  View all meetings: `All meetings`
+5.  Grant premium status: `Grant premium`
+6.  Revoke premium status: `Revoke premium`
 
-Copyright (c) 2025 Andrey Braunder
+## License
+------------
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+See [LICENSE](LICENSE) for more information.
