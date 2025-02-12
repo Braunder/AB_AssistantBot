@@ -6,6 +6,8 @@
 
 AB Assistant Bot is a bot designed to manage meetings and events. It allows users to add, delete, and view meetings, as well as grant and revoke premium status to other users.
 
+You can test the bot here https://t.me/AB_AlarmBot
+
 ## Features
 ------------
 
