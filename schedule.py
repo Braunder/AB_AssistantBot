@@ -60,11 +60,11 @@ class Schedule:
 
                 # Напоминание за сутки
                 if meeting_datetime - timedelta(days=1) <= now < meeting_datetime:
-                    await bot.send_message(user_id, f"@{username}\nНапоминание:\nЧерез сутки у вас встреча '{name}'\nОписание:\n'{description}'.")
+                    await bot.send_message(user_id, f"@{username}\nНапоминание:\nЧерез сутки у вас встреча '{name}'\nОписание:\n{description}")
 
                 # Напоминание за час
                 if meeting_datetime - timedelta(hours=1) <= now < meeting_datetime:
-                    await bot.send_message(user_id, f"@{username}\nНапоминание:\nЧерез час у вас встреча '{name}'\nОписание:\n'{description}'.")
+                    await bot.send_message(user_id, f"@{username}\nНапоминание:\nЧерез час у вас встреча '{name}'\nОписание:\n{description}")
 
                 # Обработка повторяющихся встреч
                 if recurrence == "Еженедельно":
